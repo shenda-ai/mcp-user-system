@@ -4,20 +4,41 @@
   "description": "MCP server for token-user-system — wallet operations via Model Context Protocol",
   "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "bin": {
     "mcp-user-system": "dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shenda-ai/mcp-user-system.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shenda-ai/mcp-user-system/issues"
+  },
+  "homepage": "https://github.com/shenda-ai/mcp-user-system#readme",
+  "engines": {
+    "node": ">=18.0.0"
   },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "mcp",
+    "model-context-protocol",
     "token-user-system",
-    "wallet"
+    "wallet",
+    "claude",
+    "ai"
   ],
-  "author": "",
+  "author": "shenda-ai",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4"
