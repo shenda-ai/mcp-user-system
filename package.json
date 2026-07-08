@@ -1,17 +1,19 @@
 {
   "name": "mcp-user-system",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server for token-user-system — wallet operations via Model Context Protocol",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist",
+    "install.cjs",
     "README.md",
     "LICENSE"
   ],
   "bin": {
-    "mcp-user-system": "dist/index.js"
+    "mcp-user-system": "dist/index.js",
+    "mcp-user-system-install": "install.cjs"
   },
   "repository": {
     "type": "git",
