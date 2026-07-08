@@ -8,6 +8,7 @@ import { loadConfig } from "../env.js";
 const config = loadConfig();
 
 async function apiCall<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
+  const config = loadConfig();
   const headers: Record<string, string> = {
     Authorization: `Bearer ${config.accessToken}`,
     "Content-Type": "application/json",
