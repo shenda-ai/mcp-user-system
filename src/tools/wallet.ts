@@ -1,6 +1,6 @@
 /**
- * Wallet API client for token-user-system.
- * Mirrors the front-end request.js interceptor logic.
+ * OpenAPI client for token-user-system.
+ * Calls backend-openapi endpoints under /openapi/*.
  */
 
 import { loadConfig } from "../env.js";
@@ -10,12 +10,8 @@ const config = loadConfig();
 async function apiCall<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
   const config = loadConfig();
   const headers: Record<string, string> = {
-    Authorization: `Bearer ${config.accessToken}`,
+    Authorization: config.apiKey,
     "Content-Type": "application/json",
-    "Crypto-Version": "*.*.*",
-    accountType: "S_",
-    platformType: "skill",
-    DeviceType: "pc",
   };
 
   const res = await fetch(`${config.baseUrl}${path}`, {
@@ -31,9 +27,9 @@ async function apiCall<T = unknown>(method: string, path: string, body?: unknown
   return JSON.parse(text) as T;
 }
 
-// --- Balance ---
+// --- Wallet Overview ---
 
-export interface BalanceVo {
+export interface WalletOverviewVo {
   balance?: number;
   usableBalance?: number;
   voucher?: number;
@@ -42,86 +38,164 @@ export interface BalanceVo {
   pendingCount?: number;
 }
 
-export async function getBalance(): Promise<BalanceVo> {
-  const data = await apiCall<{ code: number; data: BalanceVo }>("GET", "/console/wallet/overview");
+export async function getWalletOverview(): Promise<WalletOverviewVo> {
+  const data = await apiCall<{ code: number; msg: string; data: WalletOverviewVo }>("GET", "/openapi/wallet");
   return data.data;
 }
 
-// --- Trend ---
+// --- Dashboard Stats ---
 
-export interface TrendItem {
-  date: string;
-  amount: number;
+export interface DashboardStatsVo {
+  usedQuotaTotal?: number;
+  lastMonthUsed?: number;
+  monthComparePercent?: number;
+  usedAmount?: number;
+  usedTokens?: number;
+  requestCount?: number;
+  activeUsers?: number;
+  showCompare?: boolean;
+  amountComparePercent?: number;
+  tokenComparePercent?: number;
+  requestComparePercent?: number;
+  activeUserCompare?: number;
 }
 
-export async function getTrend(days: number = 30): Promise<TrendItem[]> {
-  const data = await apiCall<{ code: number; data: TrendItem[] }>("GET", `/console/wallet/consumption/trend?days=${days}`);
-  return data.data;
-}
-
-// --- Transactions ---
-
-export interface TransactionRecord {
-  typeName?: string;
-  recordType?: string;
-  orderNo?: string;
-  eventTime?: string;
-  amount?: number;
-  status?: string;
-}
-
-export async function getTransactions(params?: {
-  recordType?: string;
+export async function getDashboardStats(params?: {
+  timeRange?: string;
   startDate?: string;
   endDate?: string;
-}): Promise<TransactionRecord[]> {
+}): Promise<DashboardStatsVo> {
   const query = new URLSearchParams();
-  if (params?.recordType) query.append("recordType", params.recordType);
+  if (params?.timeRange) query.append("timeRange", params.timeRange);
   if (params?.startDate) query.append("startDate", params.startDate);
   if (params?.endDate) query.append("endDate", params.endDate);
   const qs = query.toString();
-  const data = await apiCall<{ code: number; data: TransactionRecord[] }>(
+  const data = await apiCall<{ code: number; msg: string; data: DashboardStatsVo }>(
     "GET",
-    `/console/wallet/transaction/list${qs ? "?" + qs : ""}`
+    `/openapi/dashboard/stats${qs ? "?" + qs : ""}`
   );
   return data.data;
 }
 
-// --- Coupons ---
+// --- Dashboard Orders ---
 
-export interface CouponCount {
-  unredeemedCount?: number;
-  redeemedCount?: number;
-  voidedCount?: number;
-}
-
-export interface Coupon {
-  couponCode?: string;
+export interface OrderDetailVo {
+  createTime?: string;
+  createdAt?: number;
+  userId?: number;
+  userName?: string;
+  teamNickname?: string;
+  deptId?: number;
+  deptName?: string;
+  tokenId?: number;
+  tokenName?: string;
+  modelName?: string;
+  useTime?: number;
+  status?: number;
   amount?: number;
-  status?: string;
-  expireDeadline?: string;
+  statusText?: string;
+  type?: string;
 }
 
-export interface CouponVo {
-  count?: CouponCount;
-  coupons?: Coupon[];
+export interface TableDataInfo<T> {
+  total: number;
+  rows: T[];
+  code: number;
+  msg: string;
 }
 
-export async function getCoupons(): Promise<CouponVo> {
-  const data = await apiCall<{ code: number; data: CouponVo }>("GET", "/console/wallet/coupon/list");
+export async function getDashboardOrders(params?: {
+  timeRange?: string;
+  startDate?: string;
+  endDate?: string;
+  type?: string;
+  keyword?: string;
+}): Promise<TableDataInfo<OrderDetailVo>> {
+  const query = new URLSearchParams();
+  if (params?.timeRange) query.append("timeRange", params.timeRange);
+  if (params?.startDate) query.append("startDate", params.startDate);
+  if (params?.endDate) query.append("endDate", params.endDate);
+  if (params?.type) query.append("type", params.type);
+  if (params?.keyword) query.append("keyword", params.keyword);
+  const qs = query.toString();
+  return apiCall<TableDataInfo<OrderDetailVo>>(
+    "GET",
+    `/openapi/dashboard/orders${qs ? "?" + qs : ""}`
+  );
+}
+
+// --- Dashboard Users ---
+
+export interface DashboardUserOptionVo {
+  userId?: number;
+  userName?: string;
+  nickName?: string;
+}
+
+export async function getDashboardUsers(deptId?: string): Promise<DashboardUserOptionVo[]> {
+  const query = new URLSearchParams();
+  if (deptId) query.append("deptId", deptId);
+  const qs = query.toString();
+  const data = await apiCall<{ code: number; msg: string; data: DashboardUserOptionVo[] }>(
+    "GET",
+    `/openapi/dashboard/users${qs ? "?" + qs : ""}`
+  );
   return data.data;
 }
 
-// --- Corporate Info ---
+// --- Dashboard Model Stats ---
 
-export interface CorporateInfo {
-  accountName?: string;
-  bankName?: string;
-  accountNo?: string;
-  bankCode?: string;
+export interface DashboardModelStatVo {
+  modelName?: string;
+  callCount?: number;
+  callPercent?: number;
+  tokens?: number;
+  tokenPercent?: number;
+  amount?: number;
+  avgAmount?: number;
+  amountPercent?: number;
 }
 
-export async function getCorporateInfo(): Promise<CorporateInfo> {
-  const data = await apiCall<{ code: number; data: CorporateInfo }>("GET", "/console/wallet/recharge/corporate/info");
+export async function getDashboardModelStats(params?: {
+  timeRange?: string;
+  startDate?: string;
+  endDate?: string;
+  sortBy?: string;
+}): Promise<DashboardModelStatVo[]> {
+  const query = new URLSearchParams();
+  if (params?.timeRange) query.append("timeRange", params.timeRange);
+  if (params?.startDate) query.append("startDate", params.startDate);
+  if (params?.endDate) query.append("endDate", params.endDate);
+  if (params?.sortBy) query.append("sortBy", params.sortBy);
+  const qs = query.toString();
+  const data = await apiCall<{ code: number; msg: string; data: DashboardModelStatVo[] }>(
+    "GET",
+    `/openapi/dashboard/model-stats${qs ? "?" + qs : ""}`
+  );
+  return data.data;
+}
+
+// --- Dashboard Trend ---
+
+export interface DashboardTrendVo {
+  date?: string;
+  amount?: number;
+  tokens?: number;
+}
+
+export async function getDashboardTrend(params?: {
+  timeRange?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<DashboardTrendVo[]> {
+  const query = new URLSearchParams();
+  if (params?.timeRange) query.append("timeRange", params.timeRange);
+  if (params?.startDate) query.append("startDate", params.startDate);
+  if (params?.endDate) query.append("endDate", params.endDate);
+  const qs = query.toString();
+  const data = await apiCall<{ code: number; msg: string; data: DashboardTrendVo[] }>(
+    "GET",
+    `/openapi/dashboard/trend${qs ? "?" + qs : ""}`
+  );
   return data.data;
 }

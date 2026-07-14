@@ -4,7 +4,7 @@
 
 export interface Config {
   baseUrl: string;
-  accessToken: string;
+  apiKey: string;
 }
 
 function requireEnv(name: string): string {
@@ -18,6 +18,6 @@ function requireEnv(name: string): string {
 export function loadConfig(): Config {
   return {
     baseUrl: requireEnv("TUS_BASE_URL"),
-    accessToken: requireEnv("TUS_ACCESS_TOKEN"),
+    apiKey: requireEnv("TUS_API_KEY"),
   };
 }

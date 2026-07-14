@@ -2,8 +2,8 @@
 /**
  * MCP Server for token-user-system
  *
- * Provides wallet management tools via Model Context Protocol.
- * Supports: balance, trend, transactions, coupons, corporate-info
+ * Provides OpenAPI tools via Model Context Protocol.
+ * Supports: wallet, dashboard stats, orders, users, model-stats, trend
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -13,11 +13,12 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import {
-  getBalance,
-  getTrend,
-  getTransactions,
-  getCoupons,
-  getCorporateInfo,
+  getWalletOverview,
+  getDashboardStats,
+  getDashboardOrders,
+  getDashboardUsers,
+  getDashboardModelStats,
+  getDashboardTrend,
 } from "./tools/wallet.js";
 
 // ── MCP Server Setup ──
@@ -40,7 +41,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
-        name: "wallet_balance",
+        name: "wallet_overview",
         description: "Get account wallet overview (balance, usable balance, voucher, credit limit, pending amount)",
         inputSchema: {
           type: "object" as const,
@@ -48,54 +49,112 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: "wallet_trend",
-        description: "Get consumption trend for a given number of days",
+        name: "dashboard_stats",
+        description: "Get dashboard statistics (used quota, consumption, request count, active users, etc.)",
         inputSchema: {
           type: "object" as const,
           properties: {
-            days: {
-              type: "number" as const,
-              description: "Number of days to query (default: 30)",
-              default: 30,
-            },
-          },
-        },
-      },
-      {
-        name: "wallet_transactions",
-        description: "List wallet transaction records with optional filters",
-        inputSchema: {
-          type: "object" as const,
-          properties: {
-            recordType: {
+            timeRange: {
               type: "string" as const,
-              description: "Filter by record type",
+              description: "Time range: 0=custom, 1=last 3 days, 2=last week, 3=last month, 4=this month, 5=last year, 6=today, 7=this week, 8=this year (default: 1)",
             },
             startDate: {
               type: "string" as const,
-              description: "Start date (YYYY-MM-DD)",
+              description: "Custom start date (yyyy-MM-dd, required when timeRange=0)",
             },
             endDate: {
               type: "string" as const,
-              description: "End date (YYYY-MM-DD)",
+              description: "Custom end date (yyyy-MM-dd, required when timeRange=0)",
             },
           },
         },
       },
       {
-        name: "wallet_coupons",
-        description: "List my cash coupons",
+        name: "dashboard_orders",
+        description: "List API call detail records with optional filters",
         inputSchema: {
           type: "object" as const,
-          properties: {},
+          properties: {
+            timeRange: {
+              type: "string" as const,
+              description: "Time range: 0=custom, 1=last 3 days, 2=last week, 3=last month, 4=this month, 5=last year, 6=today, 7=this week, 8=this year (default: 1)",
+            },
+            startDate: {
+              type: "string" as const,
+              description: "Custom start date (yyyy-MM-dd)",
+            },
+            endDate: {
+              type: "string" as const,
+              description: "Custom end date (yyyy-MM-dd)",
+            },
+            type: {
+              type: "string" as const,
+              description: "Bill type filter",
+            },
+            keyword: {
+              type: "string" as const,
+              description: "Keyword filter (matches user name or team nickname)",
+            },
+          },
         },
       },
       {
-        name: "wallet_corporate_info",
-        description: "Get corporate transfer bank account info for recharge",
+        name: "dashboard_users",
+        description: "Get user dropdown options for dashboard filtering",
         inputSchema: {
           type: "object" as const,
-          properties: {},
+          properties: {
+            deptId: {
+              type: "string" as const,
+              description: "Department ID to filter users",
+            },
+          },
+        },
+      },
+      {
+        name: "dashboard_model_stats",
+        description: "Get model usage statistics (call count, token consumption, cost, etc.)",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            timeRange: {
+              type: "string" as const,
+              description: "Time range: 0=custom, 1=last 3 days, 2=last week, 3=last month, 4=this month, 5=last year, 6=today, 7=this week, 8=this year (default: 1)",
+            },
+            startDate: {
+              type: "string" as const,
+              description: "Custom start date (yyyy-MM-dd)",
+            },
+            endDate: {
+              type: "string" as const,
+              description: "Custom end date (yyyy-MM-dd)",
+            },
+            sortBy: {
+              type: "string" as const,
+              description: "Sort by: 'token' or 'amount' (default: amount)",
+            },
+          },
+        },
+      },
+      {
+        name: "dashboard_trend",
+        description: "Get consumption trend data over time",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            timeRange: {
+              type: "string" as const,
+              description: "Time range: 0=custom, 1=last 3 days, 2=last week, 3=last month, 4=this month, 5=last year, 6=today, 7=this week, 8=this year (default: 1)",
+            },
+            startDate: {
+              type: "string" as const,
+              description: "Custom start date (yyyy-MM-dd)",
+            },
+            endDate: {
+              type: "string" as const,
+              description: "Custom end date (yyyy-MM-dd)",
+            },
+          },
         },
       },
     ],
@@ -109,8 +168,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     switch (name) {
-      case "wallet_balance": {
-        const data = await getBalance();
+      case "wallet_overview": {
+        const data = await getWalletOverview();
         return {
           content: [
             {
@@ -121,22 +180,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "wallet_trend": {
-        const days = (args?.days as number) || 30;
-        const data = await getTrend(days);
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify(data, null, 2),
-            },
-          ],
-        };
-      }
-
-      case "wallet_transactions": {
-        const data = await getTransactions({
-          recordType: (args?.recordType as string) || undefined,
+      case "dashboard_stats": {
+        const data = await getDashboardStats({
+          timeRange: (args?.timeRange as string) || undefined,
           startDate: (args?.startDate as string) || undefined,
           endDate: (args?.endDate as string) || undefined,
         });
@@ -150,8 +196,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "wallet_coupons": {
-        const data = await getCoupons();
+      case "dashboard_orders": {
+        const data = await getDashboardOrders({
+          timeRange: (args?.timeRange as string) || undefined,
+          startDate: (args?.startDate as string) || undefined,
+          endDate: (args?.endDate as string) || undefined,
+          type: (args?.type as string) || undefined,
+          keyword: (args?.keyword as string) || undefined,
+        });
         return {
           content: [
             {
@@ -162,8 +214,41 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "wallet_corporate_info": {
-        const data = await getCorporateInfo();
+      case "dashboard_users": {
+        const data = await getDashboardUsers((args?.deptId as string) || undefined);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "dashboard_model_stats": {
+        const data = await getDashboardModelStats({
+          timeRange: (args?.timeRange as string) || undefined,
+          startDate: (args?.startDate as string) || undefined,
+          endDate: (args?.endDate as string) || undefined,
+          sortBy: (args?.sortBy as string) || undefined,
+        });
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "dashboard_trend": {
+        const data = await getDashboardTrend({
+          timeRange: (args?.timeRange as string) || undefined,
+          startDate: (args?.startDate as string) || undefined,
+          endDate: (args?.endDate as string) || undefined,
+        });
         return {
           content: [
             {
