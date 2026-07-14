@@ -1,17 +1,23 @@
 # mcp-user-system
 
-[MCP](https://modelcontextprotocol.io) server for token-user-system — wallet operations via Model Context Protocol.
+[MCP](https://modelcontextprotocol.io) server for token-user-system — OpenAPI operations via Model Context Protocol.
 
-Supports: balance, consumption trend, transaction records, coupons, corporate transfer info.
+Supports: wallet overview, dashboard stats, orders, users, model stats, trend.
 
 ## Prerequisites
 
 - Node.js >= 18
-- `TUS_BASE_URL` and `TUS_ACCESS_TOKEN` environment variables
+- `TUS_BASE_URL` and `TUS_API_KEY` environment variables
 
 ## Installation
 
-### 1. Clone & Build
+### 1. Install globally
+
+```bash
+npm install -g mcp-user-system
+```
+
+Or clone & build manually:
 
 ```bash
 git clone https://github.com/shenda-ai/mcp-user-system.git
@@ -24,14 +30,14 @@ npm run build
 
 ```bash
 export TUS_BASE_URL=https://api.example.com
-export TUS_ACCESS_TOKEN=eyJhbGciOiJIUzUxMiJ9...
+export TUS_API_KEY=your-openapi-key
 ```
 
 Or create a `.env` file (add to `.gitignore`):
 
 ```bash
 TUS_BASE_URL=https://api.example.com
-TUS_ACCESS_TOKEN=eyJhbGciOiJIUzUxMiJ9...
+TUS_API_KEY=your-openapi-key
 ```
 
 ### 3. Test Run
@@ -54,7 +60,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
       "args": ["/path/to/mcp-user-system/dist/index.js"],
       "env": {
         "TUS_BASE_URL": "https://api.example.com",
-        "TUS_ACCESS_TOKEN": "eyJhbGciOiJIUzUxMiJ9..."
+        "TUS_API_KEY": "your-openapi-key"
       }
     }
   }
@@ -73,7 +79,7 @@ Add to settings (Cursor: `~/.cursor/mcp.json`, VS Code: settings.json):
       "args": ["/path/to/mcp-user-system/dist/index.js"],
       "env": {
         "TUS_BASE_URL": "https://api.example.com",
-        "TUS_ACCESS_TOKEN": "eyJhbGciOiJIUzUxMiJ9..."
+        "TUS_API_KEY": "your-openapi-key"
       }
     }
   }
@@ -92,7 +98,7 @@ Add to `~/.claude/mcp.json`:
       "args": ["/path/to/mcp-user-system/dist/index.js"],
       "env": {
         "TUS_BASE_URL": "https://api.example.com",
-        "TUS_ACCESS_TOKEN": "eyJhbGciOiJIUzUxMiJ9..."
+        "TUS_API_KEY": "your-openapi-key"
       }
     }
   }
@@ -103,11 +109,12 @@ Add to `~/.claude/mcp.json`:
 
 | Tool | Description |
 |------|-------------|
-| `wallet_balance` | Get account wallet overview |
-| `wallet_trend` | Get consumption trend (`days` param) |
-| `wallet_transactions` | List transaction records (with filters) |
-| `wallet_coupons` | List cash coupons |
-| `wallet_corporate_info` | Get corporate transfer bank info |
+| `wallet_overview` | Get account wallet overview (balance, usable balance, voucher, credit limit, pending amount) |
+| `dashboard_stats` | Get dashboard statistics (used quota, consumption, request count, active users, etc.) |
+| `dashboard_orders` | List API call detail records with optional filters |
+| `dashboard_users` | Get user dropdown options for dashboard filtering |
+| `dashboard_model_stats` | Get model usage statistics (call count, token consumption, cost, etc.) |
+| `dashboard_trend` | Get consumption trend data over time |
 
 ## Development
 

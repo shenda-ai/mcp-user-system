@@ -3,7 +3,8 @@
  * MCP Server for token-user-system
  *
  * Provides OpenAPI tools via Model Context Protocol.
- * Supports: wallet, dashboard stats, orders, users, model-stats, trend
+ * Supports: wallet, dashboard stats, orders, users, model-stats, trend,
+ *           configurable-models, tokens-list, tokens-list-page, team-tree, team-members
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -19,6 +20,11 @@ import {
   getDashboardUsers,
   getDashboardModelStats,
   getDashboardTrend,
+  getConfigurableModels,
+  getTokensList,
+  getTokensListPage,
+  getTeamTree,
+  getTeamMembers,
 } from "./tools/wallet.js";
 
 // ── MCP Server Setup ──
@@ -157,6 +163,98 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
         },
       },
+      {
+        name: "configurable_models",
+        description: "List configurable AI models with pricing and features",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            deptId: {
+              type: "string" as const,
+              description: "Department ID to filter models",
+            },
+            ruleMonth: {
+              type: "string" as const,
+              description: "Rule month in yyyy-MM format",
+            },
+          },
+        },
+      },
+      {
+        name: "tokens_list",
+        description: "List all API tokens (keys) with scope check",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            status: {
+              type: "string" as const,
+              description: "Token status filter",
+            },
+            name: {
+              type: "string" as const,
+              description: "Token name filter",
+            },
+          },
+        },
+      },
+      {
+        name: "tokens_list_page",
+        description: "List API tokens with pagination",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            status: {
+              type: "string" as const,
+              description: "Token status filter",
+            },
+            name: {
+              type: "string" as const,
+              description: "Token name filter",
+            },
+            pageNum: {
+              type: "string" as const,
+              description: "Page number (default: 1)",
+            },
+            pageSize: {
+              type: "string" as const,
+              description: "Page size (default: 10)",
+            },
+          },
+        },
+      },
+      {
+        name: "team_tree",
+        description: "Get team organization structure tree",
+        inputSchema: {
+          type: "object" as const,
+          properties: {},
+        },
+      },
+      {
+        name: "team_members",
+        description: "List team members with optional filters",
+        inputSchema: {
+          type: "object" as const,
+          properties: {
+            keyword: {
+              type: "string" as const,
+              description: "Keyword to filter members",
+            },
+            deptId: {
+              type: "string" as const,
+              description: "Department ID to filter members",
+            },
+            roleId: {
+              type: "string" as const,
+              description: "Role ID to filter members",
+            },
+            status: {
+              type: "string" as const,
+              description: "Member status filter",
+            },
+          },
+        },
+      },
     ],
   };
 });
@@ -248,6 +346,82 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           timeRange: (args?.timeRange as string) || undefined,
           startDate: (args?.startDate as string) || undefined,
           endDate: (args?.endDate as string) || undefined,
+        });
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "configurable_models": {
+        const data = await getConfigurableModels({
+          deptId: (args?.deptId as string) || undefined,
+          ruleMonth: (args?.ruleMonth as string) || undefined,
+        });
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "tokens_list": {
+        const data = await getTokensList({
+          status: (args?.status as string) || undefined,
+          name: (args?.name as string) || undefined,
+        });
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "tokens_list_page": {
+        const data = await getTokensListPage({
+          status: (args?.status as string) || undefined,
+          name: (args?.name as string) || undefined,
+          pageNum: (args?.pageNum as string) || undefined,
+          pageSize: (args?.pageSize as string) || undefined,
+        });
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "team_tree": {
+        const data = await getTeamTree();
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "team_members": {
+        const data = await getTeamMembers({
+          keyword: (args?.keyword as string) || undefined,
+          deptId: (args?.deptId as string) || undefined,
+          roleId: (args?.roleId as string) || undefined,
+          status: (args?.status as string) || undefined,
         });
         return {
           content: [

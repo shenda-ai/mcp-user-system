@@ -199,3 +199,187 @@ export async function getDashboardTrend(params?: {
   );
   return data.data;
 }
+
+// --- Tokens / Configurable Models ---
+
+export interface ModelOptionVo {
+  modelCode?: string;
+  modelName?: string;
+  modelType?: string;
+  unitPrice?: number;
+  selected?: boolean;
+  features?: string[];
+  icon?: string;
+  customerDiscountRate?: number;
+  saleReferenceDiscount?: number;
+  hot?: boolean;
+}
+
+export async function getConfigurableModels(params?: {
+  deptId?: string;
+  ruleMonth?: string;
+}): Promise<ModelOptionVo[]> {
+  const query = new URLSearchParams();
+  if (params?.deptId) query.append("deptId", params.deptId);
+  if (params?.ruleMonth) query.append("ruleMonth", params.ruleMonth);
+  const qs = query.toString();
+  const data = await apiCall<{ code: number; msg: string; data: ModelOptionVo[] }>(
+    "GET",
+    `/openapi/tokens/configurable-models${qs ? "?" + qs : ""}`
+  );
+  return data.data;
+}
+
+// --- Tokens List ---
+
+export interface TokensListVo {
+  id?: number;
+  groupId?: number;
+  deptId?: number;
+  userId?: number;
+  apiKey?: string;
+  status?: number;
+  name?: string;
+  accessedTime?: number;
+  expiredTime?: number;
+  remainQuota?: number;
+  unlimitedQuota?: boolean;
+  modelLimitsEnabled?: boolean;
+  modelLimits?: string;
+  allowIps?: string;
+  usedQuota?: number;
+  group?: string;
+  crossGroupRetry?: boolean;
+  tags?: string;
+  createTime?: string;
+  baseUrl?: string;
+  queryType?: number;
+}
+
+export async function getTokensList(params?: {
+  id?: string;
+  groupId?: string;
+  deptId?: string;
+  userId?: string;
+  status?: string;
+  name?: string;
+}): Promise<TokensListVo[]> {
+  const query = new URLSearchParams();
+  if (params?.id) query.append("id", params.id);
+  if (params?.groupId) query.append("groupId", params.groupId);
+  if (params?.deptId) query.append("deptId", params.deptId);
+  if (params?.userId) query.append("userId", params.userId);
+  if (params?.status) query.append("status", params.status);
+  if (params?.name) query.append("name", params.name);
+  const qs = query.toString();
+  const data = await apiCall<{ code: number; msg: string; data: TokensListVo[] }>(
+    "GET",
+    `/openapi/tokens/list${qs ? "?" + qs : ""}`
+  );
+  return data.data;
+}
+
+export async function getTokensListPage(params?: {
+  id?: string;
+  groupId?: string;
+  deptId?: string;
+  userId?: string;
+  status?: string;
+  name?: string;
+  pageNum?: string;
+  pageSize?: string;
+}): Promise<TableDataInfo<TokensListVo>> {
+  const query = new URLSearchParams();
+  if (params?.id) query.append("id", params.id);
+  if (params?.groupId) query.append("groupId", params.groupId);
+  if (params?.deptId) query.append("deptId", params.deptId);
+  if (params?.userId) query.append("userId", params.userId);
+  if (params?.status) query.append("status", params.status);
+  if (params?.name) query.append("name", params.name);
+  if (params?.pageNum) query.append("pageNum", params.pageNum);
+  if (params?.pageSize) query.append("pageSize", params.pageSize);
+  const qs = query.toString();
+  return apiCall<TableDataInfo<TokensListVo>>(
+    "GET",
+    `/openapi/tokens/listPage${qs ? "?" + qs : ""}`
+  );
+}
+
+// --- Team ---
+
+export interface TeamTreeVo {
+  deptId?: number;
+  deptName?: string;
+  deptDesc?: string;
+  parentId?: number;
+  memberCount?: number;
+  quotaUsed?: number;
+  quotaTotal?: number;
+  isUnlimited?: boolean;
+  isEnterpriseAuth?: boolean;
+  principal?: string;
+  children?: TeamTreeVo[];
+}
+
+export async function getTeamTree(): Promise<TeamTreeVo[]> {
+  const data = await apiCall<{ code: number; msg: string; data: TeamTreeVo[] }>(
+    "GET",
+    "/openapi/team/tree"
+  );
+  return data.data;
+}
+
+// --- Team Members ---
+
+export interface UsageTrendItem {
+  date?: string;
+  amount?: number;
+}
+
+export interface TeamMemberListVo {
+  userId?: number;
+  userName?: string;
+  deptUserName?: string;
+  described?: string;
+  nickName?: string;
+  phoneNumber?: string;
+  email?: string;
+  deptId?: number;
+  deptName?: string;
+  deptDesc?: string;
+  roleId?: number;
+  roleName?: string;
+  status?: string;
+  statusName?: string;
+  realNameAuth?: boolean;
+  enterpriseAuth?: boolean;
+  quotaTotal?: number;
+  quotaUsed?: number;
+  quotaAvailable?: number;
+  limitType?: string;
+  createTime?: string;
+  lastLoginTime?: string;
+  auditStatus?: number;
+  auditStatusName?: string;
+  requestId?: number;
+  editable?: boolean;
+  usageTrend?: UsageTrendItem[];
+}
+
+export async function getTeamMembers(params?: {
+  keyword?: string;
+  deptId?: string;
+  roleId?: string;
+  status?: string;
+}): Promise<TableDataInfo<TeamMemberListVo>> {
+  const query = new URLSearchParams();
+  if (params?.keyword) query.append("keyword", params.keyword);
+  if (params?.deptId) query.append("deptId", params.deptId);
+  if (params?.roleId) query.append("roleId", params.roleId);
+  if (params?.status) query.append("status", params.status);
+  const qs = query.toString();
+  return apiCall<TableDataInfo<TeamMemberListVo>>(
+    "GET",
+    `/openapi/team/members${qs ? "?" + qs : ""}`
+  );
+}

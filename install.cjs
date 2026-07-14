@@ -80,7 +80,7 @@ async function main() {
   const tool = toolMap[toolChoice.trim() || "1"] || "claude";
 
   const baseUrl = await question("Backend URL (e.g. https://api.example.com): ");
-  const token = await question("Access Token (JWT): ");
+  const token = await question("API Key: ");
 
   if (!baseUrl || !token) {
     console.error("Error: Both URL and token are required.");
@@ -93,7 +93,7 @@ async function main() {
     args: [packagePath],
     env: {
       TUS_BASE_URL: baseUrl.trim(),
-      TUS_ACCESS_TOKEN: token.trim(),
+      TUS_API_KEY: token.trim(),
     },
   };
 
