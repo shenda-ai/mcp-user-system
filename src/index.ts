@@ -78,8 +78,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (domain.names.includes(name)) {
       try {
         const data = await domain.handler(name, parsedArgs);
+        const text = data !== undefined
+          ? JSON.stringify(data, null, 2)
+          : JSON.stringify({ message: "操作成功，无返回数据" });
         return {
-          content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+          content: [{ type: "text" as const, text }],
         };
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);

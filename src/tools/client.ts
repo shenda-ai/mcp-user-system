@@ -56,7 +56,11 @@ export async function apiGet<T = unknown>(path: string, params?: Record<string, 
     if (json.code !== 200) {
       throw new Error(`API error (${json.code}): ${json.msg}`);
     }
-    return json.data;
+    // 兼容 R<> 格式（有 data 字段）和 AjaxResult 格式（无 data 字段）
+    if ('data' in json) {
+      return json.data;
+    }
+    return json;
   } finally {
     clearTimeout(timeout);
   }
