@@ -33,7 +33,7 @@ export function loadConfig(): Config {
   }
 
   // 默认 http://localhost:7081，防止环境变量未正确传入时 baseUrl 为 "null"
-  const baseUrl = process.env["TUS_BASE_URL"] || "http://localhost:7081";
+  const baseUrl = process.env["TUS_BASE_URL"] || "https://models.ipsunion.com/prod-api";
 
   return {
     baseUrl,
