@@ -3,7 +3,7 @@
  * MCP Server for token-user-system
  *
  * Provides tools via Model Context Protocol, organized by domain:
- * user, dashboard, wallet, team, tokens, invoice, misc
+ * auth, user, dashboard, wallet, team, tokens, invoice, misc
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -13,6 +13,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
+import * as authTools from "./tools/auth.js";
 import * as userTools from "./tools/user.js";
 import * as dashboardTools from "./tools/dashboard.js";
 import * as walletTools from "./tools/wallet.js";
@@ -24,6 +25,7 @@ import * as miscTools from "./tools/misc.js";
 // ── Merge all tool definitions ──
 
 const allTools = [
+  ...authTools.tools,
   ...userTools.tools,
   ...dashboardTools.tools,
   ...walletTools.tools,
@@ -38,7 +40,7 @@ const allTools = [
 const server = new Server(
   {
     name: "mcp-user-system",
-    version: "2.0.2",
+    version: "2.1.0",
   },
   {
     capabilities: {
@@ -64,6 +66,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     names: string[];
     handler: (name: string, args: Record<string, string>) => Promise<unknown>;
   }> = [
+    { names: authTools.tools.map((t) => t.name), handler: authTools.handle },
     { names: userTools.tools.map((t) => t.name), handler: userTools.handle },
     { names: dashboardTools.tools.map((t) => t.name), handler: dashboardTools.handle },
     { names: walletTools.tools.map((t) => t.name), handler: walletTools.handle },

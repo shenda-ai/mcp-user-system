@@ -14,6 +14,18 @@ interface TableDataInfo<T = unknown> {
   rows: T[];
 }
 
+// ── Token 管理（支持对话中动态更新） ──
+
+let currentToken: string | undefined = loadConfig().accessToken;
+
+export function getToken(): string | undefined {
+  return currentToken;
+}
+
+export function setToken(token: string): void {
+  currentToken = token;
+}
+
 // ── Debug logging ──
 
 function debugLog(label: string, ...args: unknown[]): void {
@@ -40,10 +52,13 @@ const COMMON_HEADERS: Record<string, string> = {
 };
 
 function getAuthHeaders(): Record<string, string> {
-  const { accessToken } = loadConfig();
+  const token = currentToken ?? loadConfig().accessToken;
+  if (!token) {
+    throw new Error("未配置访问令牌，请使用 set_access_token 工具设置 token，或在环境变量中配置 TUS_ACCESS_TOKEN");
+  }
   return {
     ...COMMON_HEADERS,
-    "Authorization": `Bearer ${accessToken}`,
+    "Authorization": `Bearer ${token}`,
   };
 }
 
@@ -175,6 +190,68 @@ export async function apiPost<T = unknown>(path: string, body?: unknown): Promis
       throw new Error(`API error (${json.code}): ${json.msg}`);
     }
     return json.data;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * 发起 GET 请求，不携带 Authorization 头，返回完整 JSON 响应
+ * 用于验证码等无需认证的接口
+ */
+export async function apiGetRaw(path: string): Promise<Record<string, unknown>> {
+  const url = `${getBaseUrl()}${path}`;
+  debugLog(`GET(raw) ${url}`);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: COMMON_HEADERS,
+      signal: controller.signal,
+    });
+
+    const text = await res.text();
+    debugLog(`GET(raw) ${path} → ${res.status}`, text.slice(0, 500));
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+
+    return JSON.parse(text) as Record<string, unknown>;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * 发起 POST 请求，不携带 Authorization 头，返回完整 JSON 响应
+ * 用于登录等无需认证的接口
+ */
+export async function apiPostRaw(path: string, body?: unknown): Promise<Record<string, unknown>> {
+  const url = `${getBaseUrl()}${path}`;
+  const bodyStr = body ? JSON.stringify(body) : undefined;
+  debugLog(`POST(raw) ${url}`, bodyStr?.slice(0, 500));
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: COMMON_HEADERS,
+      body: bodyStr,
+      signal: controller.signal,
+    });
+
+    const text = await res.text();
+    debugLog(`POST(raw) ${path} → ${res.status}`, text.slice(0, 500));
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+
+    return JSON.parse(text) as Record<string, unknown>;
   } finally {
     clearTimeout(timeout);
   }
