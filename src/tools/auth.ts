@@ -1,5 +1,6 @@
 import { apiPostRaw, setToken, getToken } from "./client.js";
 import { loadConfig } from "../env.js";
+import { aesEncrypt } from "./crypto.js";
 
 // ---- 工具定义 ----
 export const tools = [
@@ -44,23 +45,46 @@ export async function handle(name: string, args: Record<string, string>): Promis
 
 /**
  * 执行密码登录
- * POST /console/user/login  body: { username, password, loginSms: false }
+ * POST /console/user/login
+ * 前端 request 拦截器会将整个 JSON body AES 加密后以 { data: "<base64>" } 发送，
+ * 后端有对应的解密过滤器还原原始 body。MCP 需模拟相同行为。
  * 响应格式: { code: 200, msg: "操作成功", token: "eyJ..." }
  */
 export async function doLogin(username: string, password: string): Promise<unknown> {
-  const response = await apiPostRaw("/console/user/login", {
-    username,
-    password,
-    loginSms: false,
-  });
+  // 构造原始请求体（与前端登录组件一致）
+  const plainBody = { username, password, loginSms: false };
+  // AES-128-CBC 加密整个 JSON body → Base64
+  const encryptedData = aesEncrypt(JSON.stringify(plainBody));
+  // 以 { data: "<encrypted>" } 格式发送（与前端 request.js 拦截器行为一致）
+  const response = await apiPostRaw("/console/user/login", { data: encryptedData });
 
-  if (response.code !== 200) {
-    throw new Error(`登录失败 (${response.code}): ${response.msg}`);
+  // Debug: 打印完整后端响应
+  if (process.env.TUS_DEBUG) {
+    console.error("[MCP-DEBUG] login 响应:", JSON.stringify(response).slice(0, 1000));
   }
 
-  const token = response.token as string | undefined;
+  // 兼容多种响应格式：
+  // 格式1: { code: 200, msg: "操作成功", token: "eyJ..." }  (AjaxResult.put)
+  // 格式2: { code: 200, msg: "操作成功", data: { token: "eyJ..." } }
+  // 格式3: { code: 200, data: "eyJ..." }  (token 直接作为 data)
+  const code = response.code as number | undefined;
+  if (code !== undefined && code !== 200) {
+    throw new Error(`登录失败 (${code}): ${response.msg}`);
+  }
+
+  // 从多个位置尝试获取 token
+  const token = (
+    response.token as string | undefined
+  ) ?? (
+    (response.data as Record<string, unknown> | undefined)?.token as string | undefined
+  ) ?? (
+    typeof response.data === "string" ? response.data : undefined
+  );
+
   if (!token) {
-    throw new Error("登录成功但未返回 token");
+    // 打印完整响应帮助调试
+    const keys = Object.keys(response);
+    throw new Error(`登录成功但未返回 token，响应字段: [${keys.join(", ")}]，完整响应: ${JSON.stringify(response).slice(0, 500)}`);
   }
 
   setToken(token);

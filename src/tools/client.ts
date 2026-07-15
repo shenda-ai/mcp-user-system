@@ -1,5 +1,6 @@
 import { loadConfig } from "../env.js";
 import { tryRelogin } from "./auth.js";
+import { aesEncrypt } from "./crypto.js";
 
 interface ApiResponse<T = unknown> {
   code: number;
@@ -12,6 +13,14 @@ interface TableDataInfo<T = unknown> {
   msg: string;
   total: number;
   rows: T[];
+}
+
+// ── Debug logging ──
+
+function debugLog(label: string, ...args: unknown[]): void {
+  if (process.env.TUS_DEBUG) {
+    console.error(`[MCP-DEBUG] ${label}`, ...args);
+  }
 }
 
 // ── Token management ──
@@ -30,8 +39,19 @@ export function setToken(token: string): void {
 
 function getBaseUrl(): string {
   const config = loadConfig();
-  return config.baseUrl.replace(/\/+$/, "");
+  // 后端所有接口均在 /api 路径下
+  return config.baseUrl.replace(/\/+$/, "") + "/api";
 }
+
+// ── 标准请求头（与前端 request.js 拦截器一致） ──
+
+const COMMON_HEADERS: Record<string, string> = {
+  "Content-Type": "application/json",
+  "Crypto-Version": "1.0.0",
+  "accountType": "S_",
+  "platformType": "WEB_",
+  "DeviceType": "browser",
+};
 
 function getAuthHeaders(): Record<string, string> {
   const token = currentToken ?? loadConfig().accessToken;
@@ -39,8 +59,8 @@ function getAuthHeaders(): Record<string, string> {
     throw new Error("未登录，请先使用 login 工具登录，或在环境变量中配置 TUS_ACCESS_TOKEN");
   }
   return {
+    ...COMMON_HEADERS,
     "Authorization": `Bearer ${token}`,
-    "Content-Type": "application/json",
   };
 }
 
@@ -80,19 +100,26 @@ async function withAutoRetry<T>(requestFn: () => Promise<T>): Promise<T> {
 
 /**
  * 发起 GET 请求
+ * 与前端 request.js 一致：params 加密后作为 ?data=<encrypted> 发送
  */
 export async function apiGet<T = unknown>(path: string, params?: Record<string, string | undefined>): Promise<T> {
   return withAutoRetry(async () => {
-    const query = new URLSearchParams();
+    // 构建参数对象（过滤空值）
+    const cleanParams: Record<string, string> = {};
     if (params) {
       for (const [key, value] of Object.entries(params)) {
         if (value !== undefined && value !== "") {
-          query.append(key, value);
+          cleanParams[key] = value;
         }
       }
     }
-    const qs = query.toString();
-    const url = `${getBaseUrl()}${path}${qs ? "?" + qs : ""}`;
+    // 加密参数：JSON → AES → Base64 → ?data=<encrypted>
+    // 注意：与前端一致，不做 encodeURIComponent，后端用 replace(" ","+") 补偿
+    const hasParams = Object.keys(cleanParams).length > 0;
+    const url = hasParams
+      ? `${getBaseUrl()}${path}?data=${aesEncrypt(JSON.stringify(cleanParams))}`
+      : `${getBaseUrl()}${path}`;
+    debugLog(`GET ${url}`);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
@@ -105,6 +132,7 @@ export async function apiGet<T = unknown>(path: string, params?: Record<string, 
       });
 
       const text = await res.text();
+      debugLog(`GET ${path} → ${res.status}`, text.slice(0, 500));
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${text}`);
       }
@@ -126,19 +154,26 @@ export async function apiGet<T = unknown>(path: string, params?: Record<string, 
 
 /**
  * 发起 GET 请求，返回分页数据（TableDataInfo 格式）
+ * 与前端 request.js 一致：params 加密后作为 ?data=<encrypted> 发送
  */
 export async function apiGetPage<T = unknown>(path: string, params?: Record<string, string | undefined>): Promise<TableDataInfo<T>> {
   return withAutoRetry(async () => {
-    const query = new URLSearchParams();
+    // 构建参数对象（过滤空值）
+    const cleanParams: Record<string, string> = {};
     if (params) {
       for (const [key, value] of Object.entries(params)) {
         if (value !== undefined && value !== "") {
-          query.append(key, value);
+          cleanParams[key] = value;
         }
       }
     }
-    const qs = query.toString();
-    const url = `${getBaseUrl()}${path}${qs ? "?" + qs : ""}`;
+    // 加密参数：JSON → AES → Base64 → ?data=<encrypted>
+    // 注意：与前端一致，不做 encodeURIComponent，后端用 replace(" ","+") 补偿
+    const hasParams = Object.keys(cleanParams).length > 0;
+    const url = hasParams
+      ? `${getBaseUrl()}${path}?data=${aesEncrypt(JSON.stringify(cleanParams))}`
+      : `${getBaseUrl()}${path}`;
+    debugLog(`GET(page) ${url}`);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
@@ -151,6 +186,7 @@ export async function apiGetPage<T = unknown>(path: string, params?: Record<stri
       });
 
       const text = await res.text();
+      debugLog(`GET(page) ${path} → ${res.status}`, text.slice(0, 500));
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${text}`);
       }
@@ -168,10 +204,17 @@ export async function apiGetPage<T = unknown>(path: string, params?: Record<stri
 
 /**
  * 发起 POST 请求（携带 Authorization 头）
+ * 与前端 request.js 一致：body 加密后以 { data: "<encrypted>" } 发送
  */
 export async function apiPost<T = unknown>(path: string, body?: unknown): Promise<T> {
   return withAutoRetry(async () => {
     const url = `${getBaseUrl()}${path}`;
+    // 加密 body：JSON → AES → Base64 → { data: "<encrypted>" }
+    const encryptedBody = body
+      ? { data: aesEncrypt(JSON.stringify(body)) }
+      : undefined;
+    const bodyStr = encryptedBody ? JSON.stringify(encryptedBody) : undefined;
+    debugLog(`POST ${url}`, body ? `原始: ${JSON.stringify(body).slice(0, 300)}` : "(无body)");
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
@@ -180,11 +223,12 @@ export async function apiPost<T = unknown>(path: string, body?: unknown): Promis
       const res = await fetch(url, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: body ? JSON.stringify(body) : undefined,
+        body: bodyStr,
         signal: controller.signal,
       });
 
       const text = await res.text();
+      debugLog(`POST ${path} → ${res.status}`, text.slice(0, 500));
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${text}`);
       }
@@ -206,6 +250,8 @@ export async function apiPost<T = unknown>(path: string, body?: unknown): Promis
  */
 export async function apiPostRaw(path: string, body?: unknown): Promise<Record<string, unknown>> {
   const url = `${getBaseUrl()}${path}`;
+  const bodyStr = body ? JSON.stringify(body) : undefined;
+  debugLog(`POST(raw) ${url}`, bodyStr?.slice(0, 500));
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
@@ -213,12 +259,13 @@ export async function apiPostRaw(path: string, body?: unknown): Promise<Record<s
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: body ? JSON.stringify(body) : undefined,
+      headers: COMMON_HEADERS,
+      body: bodyStr,
       signal: controller.signal,
     });
 
     const text = await res.text();
+    debugLog(`POST(raw) ${path} → ${res.status}`, text.slice(0, 500));
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: ${text}`);
     }
