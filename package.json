@@ -1,6 +1,6 @@
 {
   "name": "mcp-user-system",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "MCP server for token-user-system — Console 前台全量查询接口 (JWT Bearer Token)",
   "type": "module",
   "main": "dist/index.js",
