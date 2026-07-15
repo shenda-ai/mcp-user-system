@@ -38,7 +38,7 @@ function debugLog(label: string, ...args: unknown[]): void {
 
 function getBaseUrl(): string {
   const config = loadConfig();
-  return config.baseUrl.replace(/\/+$/, "") + "/api";
+  return config.baseUrl.replace(/\/+$/, "");
 }
 
 // ── 标准请求头（与前端 request.js 拦截器一致） ──
