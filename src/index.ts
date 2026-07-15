@@ -3,7 +3,7 @@
  * MCP Server for token-user-system
  *
  * Provides tools via Model Context Protocol, organized by domain:
- * auth, user, dashboard, wallet, team, tokens, invoice, misc
+ * user, dashboard, wallet, team, tokens, invoice, misc
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -13,7 +13,6 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-import * as authTools from "./tools/auth.js";
 import * as userTools from "./tools/user.js";
 import * as dashboardTools from "./tools/dashboard.js";
 import * as walletTools from "./tools/wallet.js";
@@ -25,7 +24,6 @@ import * as miscTools from "./tools/misc.js";
 // ── Merge all tool definitions ──
 
 const allTools = [
-  ...authTools.tools,
   ...userTools.tools,
   ...dashboardTools.tools,
   ...walletTools.tools,
@@ -66,7 +64,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     names: string[];
     handler: (name: string, args: Record<string, string>) => Promise<unknown>;
   }> = [
-    { names: authTools.tools.map((t) => t.name), handler: authTools.handle },
     { names: userTools.tools.map((t) => t.name), handler: userTools.handle },
     { names: dashboardTools.tools.map((t) => t.name), handler: dashboardTools.handle },
     { names: walletTools.tools.map((t) => t.name), handler: walletTools.handle },
@@ -106,17 +103,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 // ── Start Server ──
 
 async function main() {
-  // 尝试自动登录（配置了用户名密码但没有 token 时）
-  try {
-    const loggedIn = await authTools.tryAutoLogin();
-    if (loggedIn) {
-      console.error("Auto-login successful using TUS_USERNAME/TUS_PASSWORD");
-    }
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(`Auto-login failed: ${message}`);
-  }
-
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("mcp-user-system server running on stdio");
