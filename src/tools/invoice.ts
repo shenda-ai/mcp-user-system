@@ -19,6 +19,9 @@ export const tools = [
       properties: {
         pageNum: { type: "string", description: "页码" },
         pageSize: { type: "string", description: "每页条数" },
+        invoiceType: { type: "string", description: "发票类型筛选" },
+        status: { type: "string", description: "申请状态筛选" },
+        keyword: { type: "string", description: "订单号关键字搜索" },
       },
       required: [],
     },
@@ -45,6 +48,7 @@ export async function handle(name: string, args: Record<string, string>): Promis
     case "invoice_application_list":
       return apiGetPage("/console/invoice/application/list", {
         pageNum: args.pageNum, pageSize: args.pageSize,
+        invoiceType: args.invoiceType, status: args.status, keyword: args.keyword,
       });
     case "invoice_application_detail":
       return apiGet(`/console/invoice/application/detail/${args.applicationId}`);

@@ -5,7 +5,14 @@ export const tools = [
   {
     name: "refund_list",
     description: "退款订单列表",
-    inputSchema: { type: "object" as const, properties: {}, required: [] },
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        pageNum: { type: "number", description: "页码（默认1）" },
+        pageSize: { type: "number", description: "每页条数（默认10）" },
+      },
+      required: [],
+    },
   },
   {
     name: "refund_detail",
@@ -39,7 +46,7 @@ export const tools = [
         monthType: { type: "string", description: "月份类型" },
         deptId: { type: "string", description: "部门ID(可选)" },
       },
-      required: [],
+      required: ["monthType"],
     },
   },
   {
@@ -54,7 +61,7 @@ export const tools = [
         limitType: { type: "string", description: "限制类型" },
         quotaTotal: { type: "string", description: "额度总量" },
       },
-      required: [],
+      required: ["targetType", "targetId", "limitType"],
     },
   },
   {
@@ -68,7 +75,7 @@ export const tools = [
         targetId: { type: "string", description: "目标ID" },
         deptId: { type: "string", description: "部门ID" },
       },
-      required: [],
+      required: ["monthType", "targetType", "targetId"],
     },
   },
   {
@@ -82,7 +89,7 @@ export const tools = [
         targetId: { type: "string", description: "目标ID" },
         deptId: { type: "string", description: "部门ID" },
       },
-      required: [],
+      required: ["monthType", "targetType", "targetId"],
     },
   },
   // ---- 预警 ----
@@ -143,7 +150,9 @@ export async function handle(name: string, args: Record<string, string>): Promis
   switch (name) {
     // ---- 退款 ----
     case "refund_list":
-      return apiGetPage("/console/refund/list");
+      return apiGetPage("/console/refund/list", {
+        pageNum: args.pageNum, pageSize: args.pageSize,
+      });
     case "refund_detail":
       return apiGet(`/console/refund/${args.orderNo}`);
     case "refund_preview":

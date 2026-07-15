@@ -40,7 +40,7 @@ const allTools = [
 const server = new Server(
   {
     name: "mcp-user-system",
-    version: "2.1.0",
+    version: "2.2.0",
   },
   {
     capabilities: {

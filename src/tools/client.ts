@@ -150,7 +150,11 @@ export async function apiGetPage<T = unknown>(path: string, params?: Record<stri
     if (json.code !== undefined && json.code !== 200 && json.code !== 0) {
       throw new Error(`API error (${json.code}): ${json.msg}`);
     }
-    return json as TableDataInfo<T>;
+    // 统一分页响应格式：R<> 包装提取 .data，直接 TableDataInfo 原样返回
+    const pageData = (json.data && typeof json.data === 'object' && 'total' in json.data && 'rows' in json.data)
+      ? json.data
+      : json;
+    return pageData as TableDataInfo<T>;
   } finally {
     clearTimeout(timeout);
   }
@@ -196,8 +200,7 @@ export async function apiPost<T = unknown>(path: string, body?: unknown): Promis
 }
 
 /**
- * 发起 GET 请求，不携带 Authorization 头，返回完整 JSON 响应
- * 用于验证码等无需认证的接口
+ * 发起 GET 请求，携带 Authorization 头，返回完整 JSON 响应（不解包 data）
  */
 export async function apiGetRaw(path: string): Promise<Record<string, unknown>> {
   const url = `${getBaseUrl()}${path}`;
@@ -209,7 +212,7 @@ export async function apiGetRaw(path: string): Promise<Record<string, unknown>> 
   try {
     const res = await fetch(url, {
       method: "GET",
-      headers: COMMON_HEADERS,
+      headers: getAuthHeaders(),
       signal: controller.signal,
     });
 
@@ -226,8 +229,7 @@ export async function apiGetRaw(path: string): Promise<Record<string, unknown>> 
 }
 
 /**
- * 发起 POST 请求，不携带 Authorization 头，返回完整 JSON 响应
- * 用于登录等无需认证的接口
+ * 发起 POST 请求，携带 Authorization 头，返回完整 JSON 响应（不解包 data）
  */
 export async function apiPostRaw(path: string, body?: unknown): Promise<Record<string, unknown>> {
   const url = `${getBaseUrl()}${path}`;
@@ -240,7 +242,7 @@ export async function apiPostRaw(path: string, body?: unknown): Promise<Record<s
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: COMMON_HEADERS,
+      headers: getAuthHeaders(),
       body: bodyStr,
       signal: controller.signal,
     });
