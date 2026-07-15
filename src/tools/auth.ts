@@ -19,6 +19,19 @@ export const tools = [
     },
   },
   {
+    name: "set_access_token",
+    description:
+      "直接设置访问令牌（JWT token）。" +
+      "适用于已有 token 的场景，设置后后续请求将自动使用该令牌。",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        token: { type: "string", description: "JWT 访问令牌（以 eyJ 开头）" },
+      },
+      required: ["token"],
+    },
+  },
+  {
     name: "get_token_status",
     description: "查看当前认证状态（是否已登录、token 来源）",
     inputSchema: {
@@ -34,6 +47,8 @@ export async function handle(name: string, args: Record<string, string>): Promis
   switch (name) {
     case "login":
       return doLogin(args.username, args.password);
+    case "set_access_token":
+      return doSetToken(args.token);
     case "get_token_status":
       return getTokenStatus();
     default:
@@ -93,6 +108,18 @@ export async function doLogin(username: string, password: string): Promise<unkno
     success: true,
     message: "登录成功，后续请求将自动使用该令牌",
     user: username,
+  };
+}
+
+function doSetToken(token: string): unknown {
+  if (!token || !token.startsWith("eyJ")) {
+    throw new Error("无效的 token，应以 eyJ 开头的 JWT 令牌");
+  }
+  setToken(token);
+  return {
+    success: true,
+    message: "令牌已设置，后续请求将自动使用该令牌",
+    tokenPreview: token.slice(0, 20) + "...",
   };
 }
 

@@ -27,8 +27,8 @@ export function loadConfig(): Config {
   const password = optionalEnv("TUS_PASSWORD");
 
   if (!accessToken && (!username || !password)) {
-    throw new Error(
-      "Authentication required: provide TUS_ACCESS_TOKEN, or both TUS_USERNAME and TUS_PASSWORD"
+    process.stderr.write(
+      "[MCP] Warning: No auth configured. Use the 'login' tool to authenticate, or set TUS_ACCESS_TOKEN / TUS_USERNAME+TUS_PASSWORD.\n"
     );
   }
 
